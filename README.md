@@ -7,10 +7,8 @@ It also automatically renames screenshots from the game according to the scheme:
 
 ## Requirements
 
-Windows only
-
-Python 3.6+
-
+Windows only  
+Python 3.6+  
 watchdog, colorama
 
 ## Screenshot
