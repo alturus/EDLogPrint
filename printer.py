@@ -77,7 +77,6 @@ class LogPrinter:
         self.value_style = getattr(colorama.Style, colors['value'][1])
         self.value_color = getattr(colorama.Fore, colors['value'][0])
         print(f'{self.default_style}')
-        pass
 
     def run(self):
         if monitor.start():
@@ -338,7 +337,7 @@ class LogPrinter:
                 materials = None
                 composition = None
                 rings = 'N/A'
-                reserv_level = None
+                reserve_level = None
 
                 if scan_type == 'Detailed':
                     tidal_lock = entry.get('TidalLock', False)
@@ -451,7 +450,7 @@ class LogPrinter:
                         if i+1 < len(materials):
                             record += '\n'
 
-            if type(rings) is list:
+            if isinstance(rings, list):
                 reserve_level = entry.get('ReserveLevel')
                 record += (
                     f'\n\t{k_s}{k_c}Rings ({reserve_level}):\n'
@@ -516,7 +515,8 @@ class LogPrinter:
 
         return f'{k_s}{k_c}Fuel: {v_s}{v_c}{fuel_level:.2f}% '
 
-    def get_star_desc(self, star_class):
+    @staticmethod
+    def get_star_desc(star_class):
         description = None
         for desc, sc in STAR_DESC.items():
             if star_class in sc:
@@ -525,7 +525,8 @@ class LogPrinter:
 
         return description
 
-    def get_star_lum_desc(self, luminosity):
+    @staticmethod
+    def get_star_lum_desc(luminosity):
         description = None
         for desc, sl in STAR_LUM_DESC.items():
             if luminosity in sl:

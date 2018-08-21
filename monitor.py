@@ -134,7 +134,7 @@ class JournalHandler(FileSystemEventHandler):
                     self.state[k] = v
 
         elif (event == 'Loadout' and
-                not entry['Ship'].lower().endswith('fighter')):
+              not entry['Ship'].lower().endswith('fighter')):
             self.state['ShipName'] = entry['ShipName']
             self.state['ShipIdent'] = entry['ShipIdent']
             fuel_capacity = 0
