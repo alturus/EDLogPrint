@@ -185,6 +185,9 @@ class JournalHandler(FileSystemEventHandler):
                 total = self.state[category][name] - count
 
             self.state[category].update({name: total})
+            
+            entry.update({'Total': total})
+            line = json.dumps(entry, separators=(', ', ':'))
 
         elif event == 'ApproachBody':
             self.state['BodyType'] = 'Planet'

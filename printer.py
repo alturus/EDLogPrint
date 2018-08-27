@@ -225,11 +225,11 @@ class LogPrinter:
         elif event in ['MaterialCollected', 'MaterialDiscarded']:
             category = entry['Category']
             count = entry['Count']
+            total = entry['Total']
             operation = event.replace('Material', '')
             name = entry.get('Name_Localised')
             if not name:
                 name = entry['Name']
-            total = monitor.state[category].get(name)
             record += (
                 f'\t{k_s}{k_c}{category}: {v_s}{v_c}{name}\n'
                 f'\t{k_s}{k_c}{operation}: {v_s}{v_c}{count} '
