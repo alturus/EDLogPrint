@@ -121,13 +121,16 @@ class LogPrinter:
             ship = entry['Ship_Localised']
             ship_name = entry['ShipName']
             ship_ident = entry['ShipIdent']
-            fuel_capacity = entry['FuelCapacity']
-            fuel_level = (entry['FuelLevel'] / fuel_capacity) * 100
             record = (
                 f'\t{k_s}{k_c}CMDR: {v_s}{v_c}{cmdr}\n'
                 f'\t{k_s}{k_c}Ship: {v_s}{v_c}{ship} "{ship_name}" {ship_ident} '
             )
-            record += self.get_fuel_level(fuel_level)
+            try:
+                fuel_capacity = entry['FuelCapacity']
+                fuel_level = (entry['FuelLevel'] / fuel_capacity) * 100
+                record += self.get_fuel_level(fuel_level)
+            except ZeroDivisionError:
+                pass
 
         elif event == 'Location':
             star_system = entry['StarSystem']
@@ -189,17 +192,22 @@ class LogPrinter:
             jump_dist = entry['JumpDist']
             system_sec = entry['SystemSecurity_Localised']
             population = entry['Population']
-            fuel_used = (float(entry['FuelUsed']) / float(entry['FuelCapacity'])) * 100
-            fuel_level = (float(entry['FuelLevel']) / float(entry['FuelCapacity'])) * 100
 
             record = (
                 f'\t{k_s}{k_c}System: {v_s}{v_c}{star_system} '
                 f'{k_s}{k_c}Sec.: {v_s}{v_c}{system_sec} '
                 f'{k_s}{k_c}Population: {v_s}{v_c}{population:,d}\n'
-                f'\t{k_s}{k_c}Jump distance: {v_s}{v_c}{jump_dist:.1f} ly\n'
-                f'\t{k_s}{k_c}Fuel used: {v_s}{v_c}{fuel_used:.1f}% '
+                f'\t{k_s}{k_c}Jump distance: {v_s}{v_c}{jump_dist:.1f} ly'
             )
-            record += self.get_fuel_level(fuel_level)
+            try:
+                fuel_used = (float(entry['FuelUsed']) / float(entry['FuelCapacity'])) * 100
+                fuel_level = (float(entry['FuelLevel']) / float(entry['FuelCapacity'])) * 100
+                record += f'\n\t{k_s}{k_c}Fuel used: {v_s}{v_c}{fuel_used:.1f}% '
+                record += self.get_fuel_level(fuel_level)
+            except ZeroDivisionError:
+                record += (
+                    f'\n\t{k_s}{k_c}Fuel: {v_s}{v_c}N/A '
+                )
 
         elif event == 'SupercruiseEntry':
             star_system = entry['StarSystem']
@@ -240,8 +248,11 @@ class LogPrinter:
             scooped = float(entry['Scooped'])
             fuel_capacity = monitor.state['FuelCapacity']
             total = float(entry['Total'])
-            fuel_level = (total / fuel_capacity) * 100
-            record = '\t' + self.get_fuel_level(fuel_level)
+            try:
+                fuel_level = (total / fuel_capacity) * 100
+                record = '\t' + self.get_fuel_level(fuel_level)
+            except ZeroDivisionError:
+                pass
 
         elif event == 'Docked':
             station_name = entry['StationName']
@@ -501,7 +512,10 @@ class LogPrinter:
         if not fuel_level:
             fuel_capacity = monitor.state['FuelCapacity']
             fuel_level = monitor.state['FuelLevel']
-            fuel_level = (fuel_level / fuel_capacity) * 100
+            try:
+                fuel_level = (fuel_level / fuel_capacity) * 100
+            except ZeroDivisionError:
+                fuel_level = 0
 
         k_s = self.key_style
         k_c = self.key_color
