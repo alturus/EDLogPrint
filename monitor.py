@@ -228,7 +228,7 @@ class JournalHandler(FileSystemEventHandler):
             self.state['ShipIdent'] = entry['UserShipId']
 
         elif event in ['ShipyardNew', 'ShipyardSwap']:
-            self.state['Ship_Localised'] = entry['ShipType_Localised']
+            self.state['Ship_Localised'] = entry.get('ShipType')
             self.state['ShipName'] = None
             self.state['ShipIdent'] = None
 

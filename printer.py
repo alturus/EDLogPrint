@@ -277,9 +277,9 @@ class LogPrinter:
                 )
 
         elif event in ['ShipyardNew', 'ShipyardSwap']:
-            ship_type = entry['ShipType_Localised']
+            ship_type = entry.get('ShipType')
             record = (
-                f'\t{k_s}{k_c}Ship: {v_s}{v_c}{ship_type}'
+                f'\t{k_s}{k_c}Ship: {v_s}{v_c}{ship_type.title()}'
             )
 
         elif event == 'Scan':
