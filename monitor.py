@@ -180,7 +180,7 @@ class JournalHandler(FileSystemEventHandler):
                 name = entry['Name']
 
             if event == 'MaterialCollected':
-                total = self.state[category][name] + count
+                total = self.state[category].get(name, 0) + count
             elif event == 'MaterialDiscarded':
                 total = self.state[category][name] - count
 

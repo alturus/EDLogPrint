@@ -455,6 +455,10 @@ class ScanBeltCluster(ColorMixin):
         return schema
 
 
+class ScanRing(ScanBeltCluster):
+    pass
+
+
 class Scan(ColorMixin):
     def __init__(self, entry):
         super().__init__()
@@ -472,6 +476,8 @@ class Scan(ColorMixin):
             body_type = 'Star'
         elif 'Belt Cluster' in entry.get('BodyName'):
             body_type = 'Belt Cluster'
+        elif 'Ring' in entry.get('BodyName'):
+            body_type = 'Ring'
         elif 'Planet' in entry['Parents'][0]:
             body_type = 'Moon'
         elif 'MassEM' in entry:
@@ -494,6 +500,7 @@ class Scan(ColorMixin):
             body_scan = {
                 'Star': ScanStar,
                 'Belt Cluster': ScanBeltCluster,
+                'Ring': ScanRing,
                 'Moon': ScanMoon,
                 'Planet': ScanPlanet,
             }
@@ -706,7 +713,7 @@ class Docked(ColorMixin):
         self.station_name = entry.get('StationName', 'ERROR')
         self.station_type = entry.get('StationType', 'ERROR')
         self.station_faction = entry.get('StationFaction', 'ERROR')
-        self.faction_state = entry.get('FactionState', 'None')
+        self.faction_state = self.station_faction.get('FactionState', 'None')
 
     @property
     def schema(self):
