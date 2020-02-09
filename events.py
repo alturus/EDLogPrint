@@ -6,6 +6,7 @@ import colorama
 
 import screenshot
 from config import config
+from interests import Interest
 
 
 class ColorMixin:
@@ -15,6 +16,9 @@ class ColorMixin:
         self.k_c = getattr(colorama.Fore, colors['key'][0])
         self.v_s = getattr(colorama.Style, colors['value'][1])
         self.v_c = getattr(colorama.Fore, colors['value'][0])
+        # interest color
+        self.i_s = getattr(colorama.Style, colors['interest'][1])
+        self.i_c = getattr(colorama.Fore, colors['interest'][0])
 
 
 class Fuel(ColorMixin):
@@ -201,15 +205,17 @@ class ScanStar(ColorMixin):
 
     def __init__(self, entry, scan_type):
         super().__init__()
+        self.id = entry['BodyID']
         self.body_type = 'Star'
+        self.parents = entry.get('Parents', [])
         self.scan_type = scan_type
         self.body_name = entry.get('BodyName', 'ERROR')
         self.star_type = entry.get('StarType', 'ERROR')
         self.star_desc = self.get_star_desc(self.star_type)
         self.sub_class = entry.get('Subclass', 'ERROR')
         self.stellar_mass = entry.get('StellarMass', -1)
-        self.radius = entry.get('Radius', -1)
-        self.solar_radius = self.radius / 695508000
+        self.radius = entry.get('Radius', -1) / 1000
+        self.solar_radius = self.radius / 695508
         self.absolute_magnitude = entry.get('AbsoluteMagnitude', -1)
         self.age = entry.get('Age_MY', -1)
         self.surface_temp = entry.get('SurfaceTemperature', -1)
@@ -269,7 +275,9 @@ class ScanStar(ColorMixin):
 class ScanPlanet(ColorMixin):
     def __init__(self, entry, scan_type):
         super().__init__()
+        self.id = entry['BodyID']
         self.body_type = 'Planet'
+        self.parents = entry.get('Parents', [])
         self.scan_type = scan_type
         self.body_name = entry.get('BodyName', 'ERROR')
         self.planet_class = entry.get('PlanetClass', 'ERROR')
@@ -280,9 +288,9 @@ class ScanPlanet(ColorMixin):
 
         self.rotation_period = entry.get('RotationPeriod', None)
         self.orbital_period = entry.get('OrbitalPeriod', None)
-        if self.orbital_period:
-            self.orbital_period = datetime.timedelta(seconds=int(self.orbital_period))
         self.axial_tilt = entry.get('AxialTilt', None)
+        self.semi_major_axis = entry.get('SemiMajorAxis', 0) / 1000
+        self.eccentricity = entry.get('Eccentricity', None)
 
         self.tidal_lock = entry.get('TidalLock', False)
         self.terraform_state = entry.get('TerraformState', None)
@@ -339,9 +347,11 @@ class ScanPlanet(ColorMixin):
                 f'{k_s}{k_c}Tidal lock: {v_s}{v_c}{self.tidal_lock}'
             )
 
-        schema += (
-            f'\n\t{k_s}{k_c}Orbital period: {v_s}{v_c}{self.orbital_period}'
-        )
+        if self.orbital_period:
+            orbital_period = datetime.timedelta(seconds=int(self.orbital_period))
+            schema += (
+                f'\n\t{k_s}{k_c}Orbital period: {v_s}{v_c}{orbital_period}'
+            )
 
         if self.atmosphere or self.atmosphere_composition:
             if self.atmosphere:
@@ -435,7 +445,9 @@ class ScanMoon(ScanPlanet):
 class ScanBeltCluster(ColorMixin):
     def __init__(self, entry, scan_type):
         super().__init__()
+        self.id = entry['BodyID']
         self.body_type = 'Belt Cluster'
+        self.parents = entry.get('Parents', [])
         self.scan_type = scan_type
         self.body_name = entry.get('BodyName', 'ERROR')
         self.was_discovered = entry.get('WasDiscovered', None)
@@ -464,28 +476,27 @@ class Scan(ColorMixin):
         super().__init__()
         self.entry = entry
         self.scan_type = entry.get('ScanType', None)
-        self.body_type = self.get_body_type(entry)
+        self.body_scan = self.get_body_scan()
         self.body_name = entry.get('BodyName', 'ERROR')
 
         self.rings = entry.get('Rings', None)
         self.reserve_level = entry.get('ReserveLevel', None)
 
-    @staticmethod
-    def get_body_type(entry):
-        if 'StarType' in entry:
-            body_type = 'Star'
-        elif 'Belt Cluster' in entry.get('BodyName'):
-            body_type = 'Belt Cluster'
-        elif 'Ring' in entry.get('BodyName'):
-            body_type = 'Ring'
-        elif 'Planet' in entry['Parents'][0]:
-            body_type = 'Moon'
-        elif 'MassEM' in entry:
-            body_type = 'Planet'
+    def get_body_scan(self):
+        if 'StarType' in self.entry:
+            body_scan = ScanStar(self.entry, self.scan_type)
+        elif 'Belt Cluster' in self.entry.get('BodyName'):
+            body_scan = ScanBeltCluster(self.entry, self.scan_type)
+        elif 'Ring' in self.entry.get('BodyName'):
+            body_scan = ScanRing(self.entry, self.scan_type)
+        elif 'Planet' in self.entry['Parents'][0]:
+            body_scan = ScanMoon(self.entry, self.scan_type)
+        elif 'MassEM' in self.entry:
+            body_scan = ScanPlanet(self.entry, self.scan_type)
         else:
-            body_type = None
+            body_scan = None
 
-        return body_type
+        return body_scan
 
     @property
     def schema(self):
@@ -496,15 +507,8 @@ class Scan(ColorMixin):
             f'\t{k_s}{k_c}Scan type: {v_s}{v_c}{self.scan_type}\n'
         )
 
-        if self.body_type and self.scan_type in ('AutoScan', 'Detailed'):
-            body_scan = {
-                'Star': ScanStar,
-                'Belt Cluster': ScanBeltCluster,
-                'Ring': ScanRing,
-                'Moon': ScanMoon,
-                'Planet': ScanPlanet,
-            }
-            schema += body_scan[self.body_type](self.entry, self.scan_type).schema
+        if self.body_scan and self.scan_type in ('AutoScan', 'Detailed'):
+            schema += self.body_scan.schema
 
         if self.rings and isinstance(self.rings, list):
             schema += (
@@ -520,6 +524,16 @@ class Scan(ColorMixin):
                 )
                 if i + 1 < len(self.rings):
                     schema += '\n'
+
+        interests = Interest(self.body_scan).get_interests()
+        if interests:
+            schema += (
+                f'\n\t{k_s}{k_c}Interests:'
+            )
+            for interest in interests:
+                schema += (
+                    f'\n\t{self.i_s}{self.i_c}{interest}'
+                )
 
         return schema
 
@@ -732,7 +746,7 @@ class Docked(ColorMixin):
 class ShipyardNew(ColorMixin):
     def __init__(self, entry):
         super().__init__()
-        self.ship_type = entry.get('ShipType', 'ERROR')
+        self.ship_type = entry.get('ShipType_Localised', 'ERROR')
 
     @property
     def schema(self):

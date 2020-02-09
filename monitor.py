@@ -5,6 +5,8 @@ from os import listdir, SEEK_CUR
 from os.path import join, isdir, basename
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+import events
 from config import config
 
 
@@ -29,6 +31,7 @@ class JournalHandler(FileSystemEventHandler):
 
             'Docked': None,
             'StarSystem': None,
+            'StarSystemBodies': {},
             'SystemSecurity_Localised': None,
             'Population': 0,
             'Body': None,
@@ -122,46 +125,53 @@ class JournalHandler(FileSystemEventHandler):
         entry = json.loads(line)
         event = entry['event']
 
-        if event == 'Commander':
-            self.state['Commander'] = entry['Name']
-
-        elif event == 'NewCommander':
-            self.state['Commander'] = entry['Name']
-
-        elif event in ['LoadGame', 'Location']:
-            for k, v in entry.items():
-                if k in self.state:
-                    self.state[k] = v
-
-        elif (event == 'Loadout' and
-              not entry['Ship'].lower().endswith('fighter')):
-            self.state['ShipName'] = entry['ShipName']
-            self.state['ShipIdent'] = entry['ShipIdent']
-            fuel_capacity = 0
-            for module in entry['Modules']:
-                if module['Item'].lower().find('fueltank') > -1:
-                    item = module['Item'].split('_')
-                    size = int(item[2][-1])
-                    fuel_capacity += 2 ** size
-            self.state['FuelCapacity'] = fuel_capacity
-
-        elif event == 'Docked':
-            self.state['Docked'] = True
-            self.state['StationName'] = entry['StationName']
-            self.state['StationType'] = entry['StationType']
-
-        elif event == 'Undocked':
-            self.state['Docked'] = False
-            self.state['StationName'] = None
-            self.state['StationType'] = None
-
-        elif event == 'FSDJump':
+        if event == 'FSDJump':
             self.state['BodyType'] = 'Star'
             for k, v in entry.items():
                 if k in self.state:
                     self.state[k] = v
             entry.update({'FuelCapacity': self.state['FuelCapacity']})
             line = json.dumps(entry, separators=(', ', ':'))
+
+        elif event == 'FuelScoop':
+            self.state['FuelLevel'] = entry['Total']
+
+        elif event in ['RefuelAll', 'RefuelPartial']:
+            self.state['FuelLevel'] += entry['Amount']
+
+        elif event == 'Scan':
+            body_scan = events.Scan(entry).body_scan
+            self.state['StarSystemBodies'].update({
+                (self.state['StarSystem'], entry['BodyID']): body_scan,
+            })
+
+        elif event == 'SupercruiseEntry':
+            self.state['BodyType'] = 'Null'
+
+        elif event == 'SupercruiseExit':
+            for k, v in entry.items():
+                if k in self.state:
+                    self.state[k] = v
+
+        elif event == 'ApproachBody':
+            self.state['BodyType'] = 'Planet'
+            for k, v in entry.items():
+                if k in self.state:
+                    self.state[k] = v
+
+        elif event == 'LeaveBody':
+            self.state['BodyType'] = 'Null'
+            for k, v in entry.items():
+                if k in self.state:
+                    self.state[k] = v
+
+        elif event == 'Touchdown':
+            self.state['Latitude'] = entry.get('Latitude')
+            self.state['Longitude'] = entry.get('Longitude')
+
+        elif event == 'Liftoff':
+            self.state['Latitude'] = None
+            self.state['Longitude'] = None
 
         elif event == 'Materials':
             for category in ['Raw', 'Manufactured', 'Encoded']:
@@ -185,43 +195,19 @@ class JournalHandler(FileSystemEventHandler):
                 total = self.state[category][name] - count
 
             self.state[category].update({name: total})
-            
+
             entry.update({'Total': total})
             line = json.dumps(entry, separators=(', ', ':'))
 
-        elif event == 'ApproachBody':
-            self.state['BodyType'] = 'Planet'
-            for k, v in entry.items():
-                if k in self.state:
-                    self.state[k] = v
+        elif event == 'Docked':
+            self.state['Docked'] = True
+            self.state['StationName'] = entry['StationName']
+            self.state['StationType'] = entry['StationType']
 
-        elif event == 'LeaveBody':
-            self.state['BodyType'] = 'Null'
-            for k, v in entry.items():
-                if k in self.state:
-                    self.state[k] = v
-
-        elif event == 'Touchdown':
-            self.state['Latitude'] = entry.get('Latitude')
-            self.state['Longitude'] = entry.get('Longitude')
-
-        elif event == 'Liftoff':
-            self.state['Latitude'] = None
-            self.state['Longitude'] = None
-
-        elif event == 'SupercruiseEntry':
-            self.state['BodyType'] = 'Null'
-
-        elif event == 'SupercruiseExit':
-            for k, v in entry.items():
-                if k in self.state:
-                    self.state[k] = v
-
-        elif event == 'FuelScoop':
-            self.state['FuelLevel'] = entry['Total']
-
-        elif event in ['RefuelAll', 'RefuelPartial']:
-            self.state['FuelLevel'] += entry['Amount']
+        elif event == 'Undocked':
+            self.state['Docked'] = False
+            self.state['StationName'] = None
+            self.state['StationType'] = None
 
         elif event == 'SetUserShipName':
             self.state['ShipName'] = entry['UserShipName']
@@ -231,6 +217,29 @@ class JournalHandler(FileSystemEventHandler):
             self.state['Ship_Localised'] = entry.get('ShipType')
             self.state['ShipName'] = None
             self.state['ShipIdent'] = None
+
+        elif event == 'Commander':
+            self.state['Commander'] = entry['Name']
+
+        elif event in ['LoadGame', 'Location']:
+            for k, v in entry.items():
+                if k in self.state:
+                    self.state[k] = v
+
+        elif (event == 'Loadout' and
+              not entry['Ship'].lower().endswith('fighter')):
+            self.state['ShipName'] = entry['ShipName']
+            self.state['ShipIdent'] = entry['ShipIdent']
+            fuel_capacity = 0
+            for module in entry['Modules']:
+                if module['Item'].lower().find('fueltank') > -1:
+                    item = module['Item'].split('_')
+                    size = int(item[2][-1])
+                    fuel_capacity += 2 ** size
+            self.state['FuelCapacity'] = fuel_capacity
+
+        elif event == 'NewCommander':
+            self.state['Commander'] = entry['Name']
 
         self.event_queue.append(line)
 

@@ -15,6 +15,7 @@ config = {
         'event_value': ('GREEN', 'BRIGHT'),
         'key': ('WHITE', 'BRIGHT'),
         'value': ('WHITE', 'NORMAL'),
+        'interest': ('RED', 'BRIGHT'),
     }
 }
 
