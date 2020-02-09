@@ -412,26 +412,30 @@ class ScanPlanet(ColorMixin):
             schema += (
                 f'\n\t{k_s}{k_c}Materials:\n'
             )
-            ident = ' ' * 4
-            columns = 2
+            ident = ' ' * 3
+            columns = 3
             rows = math.ceil(len(self.materials) / columns)
             for index in range(rows):
-                name1 = self.materials[index]['Name'].capitalize()
-                percent1 = self.materials[index]['Percent']
+                name = self.materials[index]['Name'].capitalize()
+                percent = self.materials[index]['Percent']
 
                 schema += (
-                    f'\t{ident}{v_s}{v_c}{name1:10} -{percent1:6.2f}%'
+                    f'\t{ident}{v_s}{v_c}{name:10} -{percent:6.2f}%'
                 )
 
-                try:
-                    name2 = self.materials[rows+index]['Name'].capitalize()
-                    percent2 = self.materials[rows+index]['Percent']
+                for column in range(1, columns):
+                    try:
+                        name = self.materials[index+(column * rows)]['Name'].capitalize()
+                        percent = self.materials[index+(column * rows)]['Percent']
 
-                    schema += (
-                        f'{ident}{name2:10} -{percent2:6.2f}%\n'
-                    )
-                except IndexError:
-                    pass
+                        schema += (
+                            f'{ident}{name:10} -{percent:6.2f}%'
+                        )
+                    except IndexError:
+                        pass
+
+                if index + 1 < rows:
+                    schema += '\n'
 
         return schema
 
