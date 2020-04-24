@@ -1,3 +1,4 @@
+import codecs
 import time
 import json
 import threading
@@ -107,7 +108,7 @@ class JournalHandler(FileSystemEventHandler):
     def worker(self):
         if not self.logfile:
             return
-        self.loghandle = open(join(self.journal_dir, self.logfile), 'r')
+        self.loghandle = codecs.open(join(self.journal_dir, self.logfile), 'r', encoding='utf-8')
 
         while True:
             loghandle = self.loghandle

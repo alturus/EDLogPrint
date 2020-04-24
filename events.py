@@ -60,7 +60,7 @@ class LoadGame(ColorMixin):
     def __init__(self, entry):
         super().__init__()
         self.cmdr = entry.get('Commander', 'ERROR')
-        self.ship = entry.get('Ship_Localised', 'ERROR')
+        self.ship = entry.get('Ship_Localised') or entry.get('Ship', 'ERROR')
         self.ship_name = entry.get('ShipName', 'ERROR')
         self.ship_ident = entry.get('ShipIdent', 'ERROR')
         self.fuel_level = entry.get('FuelLevel', 0)
@@ -207,6 +207,7 @@ class ScanStar(ColorMixin):
         super().__init__()
         self.id = entry['BodyID']
         self.body_type = 'Star'
+        self.star_system = entry.get('StarSystem')
         self.parents = entry.get('Parents', [])
         self.scan_type = scan_type
         self.body_name = entry.get('BodyName', 'ERROR')
@@ -277,6 +278,7 @@ class ScanPlanet(ColorMixin):
         super().__init__()
         self.id = entry['BodyID']
         self.body_type = 'Planet'
+        self.star_system = entry.get('StarSystem')
         self.parents = entry.get('Parents', [])
         self.scan_type = scan_type
         self.body_name = entry.get('BodyName', 'ERROR')
@@ -291,6 +293,7 @@ class ScanPlanet(ColorMixin):
         self.axial_tilt = entry.get('AxialTilt', None)
         self.semi_major_axis = entry.get('SemiMajorAxis', 0) / 1000
         self.eccentricity = entry.get('Eccentricity', None)
+        self.orbital_inclination = entry.get('OrbitalInclination', None)
 
         self.tidal_lock = entry.get('TidalLock', False)
         self.terraform_state = entry.get('TerraformState', None)
@@ -451,6 +454,7 @@ class ScanBeltCluster(ColorMixin):
         super().__init__()
         self.id = entry['BodyID']
         self.body_type = 'Belt Cluster'
+        self.star_system = entry.get('StarSystem')
         self.parents = entry.get('Parents', [])
         self.scan_type = scan_type
         self.body_name = entry.get('BodyName', 'ERROR')

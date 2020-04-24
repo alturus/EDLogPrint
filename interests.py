@@ -8,12 +8,12 @@ class Interest:
 
     def get_interests(self):
         body = self.body_scan
-        current_starsystem = monitor.state['StarSystem']
+        current_starsystem = body.star_system
         starsystem_bodies = monitor.state['StarSystemBodies']
         parent_body_type = list(body.parents[0].keys())[0] if body.parents else None
         parent_body_id = list(body.parents[0].values())[0] if body.parents else None
 
-        if body.body_type in ['Planet', 'Moon']:
+        if body.body_type in ('Planet', 'Moon'):
             if body.landable and body.surface_gravity > 2.0:
                 self.interests.append('Landable with high gravity')
 
@@ -33,12 +33,12 @@ class Interest:
                 binary_body_id = body.parents[0]['Null']
                 first_body_id = body.id
                 binary_partner = None
-                for starsystem, body in starsystem_bodies.items():
+                for starsystem, body_ in starsystem_bodies.items():
                     if (starsystem == current_starsystem
-                            and body.id != first_body_id
-                            and body.parents and 'Null' in body.parents[0]
-                            and body.parents[0]['Null'] == binary_body_id):
-                        binary_partner = body
+                            and body_.id != first_body_id
+                            and body_.parents and 'Null' in body_.parents[0]
+                            and body_.parents[0]['Null'] == binary_body_id):
+                        binary_partner = body_
                         break
                 self.interests.append(f'Close binary relative to body size.')
 
@@ -66,6 +66,12 @@ class Interest:
                             )
                             if separation < body.radius * 20:
                                 self.interests.append('Close ring proximity')
+                            if parent_body.body_type is 'Planet':
+                                orbital_inclination_diff = abs(
+                                    parent_body.orbital_inclination - body.orbital_inclination
+                                )
+                                if orbital_inclination_diff > 10 and separation < body.radius * 400:
+                                    self.interests.append('Close ring proximity with different orbital inclination')
 
             if not body.landable and not body.atmosphere_composition:
                 self.interests.append('Not landable without atmosphere')
