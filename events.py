@@ -789,18 +789,8 @@ class Screenshot(ColorMixin):
         k_c, v_c = self.k_c, self.v_c
         k_s, v_s = self.k_s, self.v_s
 
-        new_filename = screenshot.rename(
-            self.filename,
-            self.body,
-            self.timestamp,
-            latitude=self.latitude,
-            longitude=self.longitude,
-        )
-        if not new_filename:
-            new_filename = f'Unable to rename file: {self.filename}'
-
         schema = (
-            f'\t{k_s}{k_c}Filename: {v_s}{v_c}{new_filename}\n'
+            f'\t{k_s}{k_c}Filename: {v_s}{v_c}{self.filename}\n'
             f'\t{k_s}{k_c}Resolution: {v_s}{v_c}{self.width}x{self.height}\n'
             f'\t{k_s}{k_c}Star system: {v_s}{v_c}{self.star_system} '
             f'{k_s}{k_c}Body: {v_s}{v_c}{self.body} '
@@ -813,3 +803,22 @@ class Screenshot(ColorMixin):
             )
 
         return schema
+
+    def rename(self):
+        new_filename = screenshot.rename(
+            self.filename,
+            self.body,
+            self.timestamp,
+            latitude=self.latitude,
+            longitude=self.longitude,
+        )
+        if not new_filename:
+            self.filename = f'Unable to rename file: {self.filename}'
+            return False
+
+        self.filename = new_filename
+
+        return True
+
+    def convert_to_png(self):
+        screenshot.convert_to_png(self.filename)

@@ -5,6 +5,7 @@ from os.path import join, isdir
 config = {
     'journal_dir': 'default',
     'screenshots_dir': 'default',
+    'convert_screenshots': True,
 
     # (Fore, Style)
     # Fore: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE

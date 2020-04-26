@@ -1,5 +1,7 @@
 import os
+import subprocess
 from os.path import join, isfile
+
 from config import config
 
 
@@ -24,6 +26,18 @@ def rename(filename, body_name, timestamp, latitude=None, longitude=None):
 
     try:
         os.rename(file, newfile)
-        return newfilename
     except OSError:
         return False
+
+    return newfilename
+
+
+def convert_to_png(filename):
+    screenshots_dir = config['screenshots_dir']
+    file_path = join(screenshots_dir, filename)
+
+    subprocess.Popen(
+        ['python', 'convert_to_png.py', file_path],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT
+    )

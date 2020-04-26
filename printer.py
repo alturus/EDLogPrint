@@ -107,7 +107,11 @@ class LogPrinter:
             record = events.Scan(entry).schema
 
         elif event == 'Screenshot':
-            record = events.Screenshot(entry).schema
+            screenshot_event = events.Screenshot(entry)
+            is_renamed = screenshot_event.rename()
+            if is_renamed and config.get('convert_screenshots', False):
+                screenshot_event.convert_to_png()
+            record = screenshot_event.schema
 
         elif event == 'Location':
             record = events.Location(entry).schema
