@@ -41,6 +41,8 @@ class LogPrinter:
         'VehicleSwitch',
         'ShipyardSwap',
         'ShipyardNew',
+        'ReceiveText',
+        'Died',
     )
 
     def __init__(self):
@@ -90,77 +92,101 @@ class LogPrinter:
 
         default_color = self.default_color
 
-        print(f'{evt_k_c}{evt_k_s}{timestamp}: {evt_v_s}{evt_v_c}{event}{default_color}')
+        # print(f'{evt_k_c}{evt_k_s}{timestamp}: {evt_v_s}{evt_v_c}{event}{default_color}')
 
-        record = ''
+        # record = ''
+        record = f'{evt_k_c}{evt_k_s}{timestamp}: {evt_v_s}{evt_v_c}{event}{default_color}\n'
 
         if event == 'LoadGame':
-            record = events.LoadGame(entry).schema
+            record += events.LoadGame(entry).schema
 
         elif event == 'FSSDiscoveryScan':
-            record = events.FSSDiscoveryScan(entry).schema
+            record += events.FSSDiscoveryScan(entry).schema
 
         elif event == 'FSSAllBodiesFound':
-            record = events.FSSAllBodiesFound(entry).schema
+            record += events.FSSAllBodiesFound(entry).schema
 
         elif event == 'Scan':
-            record = events.Scan(entry).schema
+            record += events.Scan(entry).schema
 
         elif event == 'Screenshot':
             screenshot_event = events.Screenshot(entry)
             is_renamed = screenshot_event.rename()
             if is_renamed and config.get('convert_screenshots', False):
                 screenshot_event.convert_to_png()
-            record = screenshot_event.schema
+            record += screenshot_event.schema
 
         elif event == 'Location':
-            record = events.Location(entry).schema
+            record += events.Location(entry).schema
 
         elif event == 'ApproachBody':
-            record = events.ApproachBody(entry).schema
+            record += events.ApproachBody(entry).schema
 
         elif event == 'LeaveBody':
-            record = events.LeaveBody(entry).schema
+            record += events.LeaveBody(entry).schema
 
         elif event == 'Touchdown':
-            record = events.Touchdown(entry).schema
+            record += events.Touchdown(entry).schema
 
         elif event == 'Liftoff':
-            record = events.Liftoff(entry).schema
+            record += events.Liftoff(entry).schema
 
         elif event == 'FSDJump':
-            record = events.FSDJump(entry).schema
+            record += events.FSDJump(entry).schema
 
         elif event == 'SupercruiseEntry':
-            record = events.SupercruiseEntry(entry).schema
+            record += events.SupercruiseEntry(entry).schema
 
         elif event == 'SupercruiseExit':
-            record = events.SupercruiseExit(entry).schema
+            record += events.SupercruiseExit(entry).schema
 
         elif event == 'DiscoveryScan':
-            record = events.DiscoveryScan(entry).schema
+            record += events.DiscoveryScan(entry).schema
 
         elif event == 'MaterialCollected':
-            record = events.MaterialCollected(entry).schema
+            record += events.MaterialCollected(entry).schema
 
         elif event == 'MaterialDiscarded':
-            record = events.MaterialDiscarded(entry).schema
+            record += events.MaterialDiscarded(entry).schema
 
         elif event == 'FuelScoop':
             entry['FuelCapacity'] = monitor.state['FuelCapacity']
-            record = events.FuelScoop(entry).schema
+            record += events.FuelScoop(entry).schema
 
         elif event == 'Docked':
-            record = events.Docked(entry).schema
+            record += events.Docked(entry).schema
 
         elif event == 'StartJump':
-            record = events.StartJump(entry).schema
+            schema = events.StartJump(entry).schema
+            if schema:
+                record += schema
+            else:
+                record = record.rstrip()
+
+        elif event == 'ReceiveText':
+            receive_text_event = events.ReceiveText(entry)
+
+            npc_msg_type = receive_text_event.npc_msg_type
+            if npc_msg_type and npc_msg_type in receive_text_event.npc_skip_messages:
+                return
+
+            if npc_msg_type:
+                record = record.replace(
+                    'ReceiveText',
+                    f'ReceiveText: {receive_text_event.channel} ({npc_msg_type})')
+            else:
+                record = record.replace('ReceiveText', f'ReceiveText: {receive_text_event.channel}')
+
+            record += receive_text_event.schema
 
         elif event == 'ShipyardNew':
-            record = events.ShipyardNew(entry).schema
+            record += events.ShipyardNew(entry).schema
 
         elif event == 'ShipyardSwap':
-            record = events.ShipyardSwap(entry).schema
+            record += events.ShipyardSwap(entry).schema
+
+        elif event == 'Died':
+            record += events.Died(entry).schema
 
         if record:
             print(record)

@@ -7,6 +7,55 @@ import colorama
 import screenshot
 from config import config
 from interests import Interest
+from monitor import monitor
+
+
+SHIP_MAP = {
+    'adder': 'Adder',
+    'anaconda': 'Anaconda',
+    'asp': 'Asp Explorer',
+    'asp_scout': 'Asp Scout',
+    'belugaliner': 'Beluga Liner',
+    'cobramkiii': 'Cobra MkIII',
+    'cobramkiv': 'Cobra MkIV',
+    'clipper': 'Panther Clipper',
+    'cutter': 'Imperial Cutter',
+    'diamondback': 'Diamondback Scout',
+    'diamondbackxl': 'Diamondback Explorer',
+    'dolphin': 'Dolphin',
+    'eagle': 'Eagle',
+    'empire_courier': 'Imperial Courier',
+    'empire_eagle': 'Imperial Eagle',
+    'empire_fighter': 'Imperial Fighter',
+    'empire_trader': 'Imperial Clipper',
+    'federation_corvette': 'Federal Corvette',
+    'federation_dropship': 'Federal Dropship',
+    'federation_dropship_mkii': 'Federal Assault Ship',
+    'federation_gunship': 'Federal Gunship',
+    'federation_fighter': 'F63 Condor',
+    'ferdelance': 'Fer-de-Lance',
+    'hauler': 'Hauler',
+    'independant_trader': 'Keelback',
+    'independent_fighter': 'Taipan Fighter',
+    'krait_mkii': 'Krait MkII',
+    'krait_light': 'Krait Phantom',
+    'mamba': 'Mamba',
+    'orca': 'Orca',
+    'python': 'Python',
+    'scout': 'Taipan Fighter',
+    'sidewinder': 'Sidewinder',
+    'testbuggy': 'Scarab',
+    'type6': 'Type-6 Transporter',
+    'type7': 'Type-7 Transporter',
+    'type9': 'Type-9 Heavy',
+    'type9_military': 'Type-10 Defender',
+    'typex': 'Alliance Chieftain',
+    'typex_2': 'Alliance Crusader',
+    'typex_3': 'Alliance Challenger',
+    'viper': 'Viper MkIII',
+    'viper_mkiv': 'Viper MkIV',
+    'vulture': 'Vulture',
+}
 
 
 class ColorMixin:
@@ -19,6 +68,12 @@ class ColorMixin:
         # interest color
         self.i_s = getattr(colorama.Style, colors['interest'][1])
         self.i_c = getattr(colorama.Fore, colors['interest'][0])
+        # cmdr_message:
+        self.cm_s = getattr(colorama.Style, colors['cmdr_message'][1])
+        self.cm_c = getattr(colorama.Fore, colors['cmdr_message'][0])
+        # npc_message:
+        self.nm_s = getattr(colorama.Style, colors['npc_message'][1])
+        self.nm_c = getattr(colorama.Fore, colors['npc_message'][0])
 
 
 class Fuel(ColorMixin):
@@ -177,6 +232,25 @@ class FSSAllBodiesFound(ColorMixin):
             f'\t{k_s}{k_c}System: {v_s}{v_c}{self.system_name} '
             f'{k_s}{k_c}Bodies: {v_s}{v_c}{self.body_count}'
         )
+
+        bodies_with_interests = {}
+        starsystem_bodies = monitor.state['StarSystemBodies']
+        for starsystem, body_id in starsystem_bodies:
+            if (starsystem == self.system_name and
+                    starsystem_bodies[(self.system_name, body_id)].interests):
+                body = starsystem_bodies[(self.system_name, body_id)]
+                bodies_with_interests.update({
+                    body.body_name: body.interests
+                })
+
+        if bodies_with_interests:
+            schema += f'\n\t{k_s}{k_c}Interests:'
+            for body_name in bodies_with_interests:
+                interests = ', '.join(bodies_with_interests[body_name])
+                schema += (
+                    f'\n\t\t{v_s}{v_c}{body_name}: {self.i_s}{self.i_c}{interests}'
+                )
+
         return schema
 
 
@@ -489,6 +563,7 @@ class Scan(ColorMixin):
 
         self.rings = entry.get('Rings', None)
         self.reserve_level = entry.get('ReserveLevel', None)
+        self.body_scan.interests = Interest(self.body_scan).get_interests()
 
     def get_body_scan(self):
         if 'StarType' in self.entry:
@@ -533,12 +608,11 @@ class Scan(ColorMixin):
                 if i + 1 < len(self.rings):
                     schema += '\n'
 
-        interests = Interest(self.body_scan).get_interests()
-        if interests:
+        if self.body_scan.interests:
             schema += (
                 f'\n\t{k_s}{k_c}Interests:'
             )
-            for interest in interests:
+            for interest in self.body_scan.interests:
                 schema += (
                     f'\n\t{self.i_s}{self.i_c}{interest}'
                 )
@@ -627,7 +701,7 @@ class StartJump(ColorMixin):
                 f'{k_s}{k_c}Class: {v_s}{v_c}{self.star_class} ({self.star_desc})'
             )
         else:
-            schema = None
+            schema = ''
 
         return schema
 
@@ -754,7 +828,7 @@ class Docked(ColorMixin):
 class ShipyardNew(ColorMixin):
     def __init__(self, entry):
         super().__init__()
-        self.ship_type = entry.get('ShipType_Localised', 'ERROR')
+        self.ship_type = entry.get('ShipType_Localised') or entry.get('ShipType')
 
     @property
     def schema(self):
@@ -770,6 +844,69 @@ class ShipyardSwap(ShipyardNew):
     pass
 
 
+class ReceiveText(ColorMixin):
+    def __init__(self, entry):
+        super().__init__()
+        self.from_ = entry.get('From')
+        self.from_localised = entry.get('From_Localised')
+        self.message = entry.get('Message')
+        self.message_localised = entry.get('Message_Localised')
+        self.channel = entry.get('Channel', 'Unknown')
+        self.npc_skip_messages = (
+            '$COMMS_entered',
+        )
+
+    @property
+    def npc_msg_type(self):
+        npc_msg_type = None
+
+        if self.channel != 'npc':
+            return
+
+        if self.message:
+            npc_msg_type = self.message.split(':')[0].replace(';', '')
+
+        return npc_msg_type
+
+    @property
+    def schema(self):
+        k_c, v_c = self.k_c, self.v_c
+        k_s, v_s = self.k_s, self.v_s
+
+        message = self.message_localised or self.message
+        from_ = self.from_localised or self.from_
+
+        if self.channel == 'npc':
+            v_s, v_c = self.nm_s, self.nm_c
+        else:
+            from_ = f'CMDR {self.from_}'
+            v_s, v_c = self.cm_s, self.cm_c
+
+        schema = f'\t{k_s}{k_c}{from_}: {v_s}{v_c}{message}'
+
+        return schema
+
+
+class Died(ColorMixin):
+    def __init__(self, entry):
+        super().__init__()
+        self.killers = entry.get('Killers')
+
+    @property
+    def schema(self):
+        k_c, v_c = self.k_c, self.v_c
+        k_s, v_s = self.k_s, self.v_s
+
+        schema = f'\t{k_s}{k_c}Killers: {v_s}{v_c}'
+        for killer in self.killers:
+            name = killer['Name'].replace('Cmdr', 'CMDR')
+            ship = SHIP_MAP.get(killer['Ship'].lower(), killer['Ship'])
+            rank = killer['Rank']
+            schema += f'\n\t{v_s}{v_c}{name:20} Ship: {ship}   Rank: {rank}'
+
+        return schema
+
+
 class Screenshot(ColorMixin):
     def __init__(self, entry):
         super().__init__()
@@ -777,8 +914,8 @@ class Screenshot(ColorMixin):
         self.filename = entry['Filename']
         self.width = entry['Width']
         self.height = entry['Height']
-        self.star_system = entry['System']
-        self.body = entry['Body']
+        self.star_system = entry.get('System', 'Unknown')
+        self.body = entry.get('Body', 'Unknown')
         self.latitude = entry.get('Latitude')
         self.longitude = entry.get('Longitude')
         self.altitude = entry.get('Altitude')

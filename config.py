@@ -13,10 +13,12 @@ config = {
     'colors': {
         'default': ('WHITE', 'BRIGHT'),
         'event_key': ('GREEN', 'NORMAL'),
-        'event_value': ('GREEN', 'BRIGHT'),
+        'event_value': ('GREEN', 'NORMAL'),
         'key': ('WHITE', 'BRIGHT'),
         'value': ('WHITE', 'NORMAL'),
         'interest': ('RED', 'BRIGHT'),
+        'cmdr_message': ('YELLOW', 'BRIGHT'),
+        'npc_message': ('YELLOW', 'NORMAL'),
     }
 }
 
